@@ -107,8 +107,13 @@ func main() {
 		defer os.Exit(1)
 		return
 	}
-	fmt.Fprintln(os.Stderr, "VM created")
-	fmt.Fprintln(os.Stderr, "UUID:", uuid)
+	fmt.Fprintf(os.Stderr, "Task %s started\n", uuid)
+	fmt.Fprintln(os.Stderr, "Waiting for task to finish")
+
+	if err := WaitForTaskToSucceed(ctx, client, uuid); err != nil {
+		fmt.Fprintln(os.Stderr, "Task failed")
+	}
+	fmt.Fprintln(os.Stderr, "Task succeeded. VM created.")
 }
 
 func ConfigFromLocalEnv() (*prismgoclient.Credentials, string, error) {
