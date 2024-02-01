@@ -24,7 +24,6 @@ import (
 	"github.com/nutanix-cloud-native/prism-go-client/utils"
 	nutanixClientV3 "github.com/nutanix-cloud-native/prism-go-client/v3"
 	"k8s.io/apimachinery/pkg/util/wait"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
@@ -41,11 +40,8 @@ func WaitForTaskToSucceed(ctx context.Context, conn *nutanixClientV3.Client, uui
 }
 
 func GetTaskStatus(ctx context.Context, client *nutanixClientV3.Client, uuid string) (string, error) {
-	log := ctrl.LoggerFrom(ctx)
-	log.V(1).Info(fmt.Sprintf("Getting task with UUID %s", uuid))
 	v, err := client.V3.GetTask(ctx, uuid)
 	if err != nil {
-		log.Error(err, fmt.Sprintf("error occurred while waiting for task with UUID %s", uuid))
 		return "", err
 	}
 
@@ -54,6 +50,5 @@ func GetTaskStatus(ctx context.Context, client *nutanixClientV3.Client, uuid str
 			fmt.Errorf("error_detail: %s, progress_message: %s", utils.StringValue(v.ErrorDetail), utils.StringValue(v.ProgressMessage))
 	}
 	taskStatus := *v.Status
-	log.V(1).Info(fmt.Sprintf("Status for task with UUID %s: %s", uuid, taskStatus))
 	return taskStatus, nil
 }
