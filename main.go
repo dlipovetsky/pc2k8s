@@ -9,6 +9,7 @@ import (
 	"os/signal"
 
 	"github.com/dlipovetsky/pc2k8s/userdata"
+	"github.com/google/uuid"
 	prismgoclient "github.com/nutanix-cloud-native/prism-go-client"
 	localEnv "github.com/nutanix-cloud-native/prism-go-client/environment/providers/local"
 	envTypes "github.com/nutanix-cloud-native/prism-go-client/environment/types"
@@ -204,7 +205,7 @@ func CreateVM(ctx context.Context, client *v3client.Client, opts *VMOptions, use
 		return "", fmt.Errorf("failed to get UUID for image %s: %w", opts.vmImageName, err)
 	}
 
-	metadata := fmt.Sprintf("{\"hostname\": \"%s\"}", opts.vmName)
+	metadata := fmt.Sprintf("{\"hostname\": \"%s\", \"uuid\": \"%s\"}", opts.vmName, uuid.New())
 
 	input := &v3client.VMIntentInput{
 		Metadata: &v3client.Metadata{
