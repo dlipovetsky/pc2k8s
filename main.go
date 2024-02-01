@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/dlipovetsky/pc2k8s/userdata"
 	prismgoclient "github.com/nutanix-cloud-native/prism-go-client"
 	localEnv "github.com/nutanix-cloud-native/prism-go-client/environment/providers/local"
 	envTypes "github.com/nutanix-cloud-native/prism-go-client/environment/types"
@@ -21,6 +22,8 @@ const (
 	defaultVMMemoryMib      = 4096
 	defaultVMSockets        = 2
 	defaultVMVcpusPerSocket = 2
+
+	defaultCAPXExecutableURL = "https://github.com/dlipovetsky/cluster-api-provider-nutanix/releases/download/v1.1h/cluster-api-provider-nutanix"
 )
 
 func main() {
@@ -29,6 +32,7 @@ func main() {
 		vmImageName      string
 		vmNutanixCluster string
 		vmSubnet         string
+		sshPublicKey     string
 
 		kubeconfig string
 		namespace  string
@@ -38,6 +42,7 @@ func main() {
 	flag.StringVar(&vmImageName, "vm-image-name", "", "VM image to use.")
 	flag.StringVar(&vmNutanixCluster, "vm-nutanix-cluster", "", "VM nutanix cluster.")
 	flag.StringVar(&vmSubnet, "vm-subnet", "", "VM subnet.")
+	flag.StringVar(&sshPublicKey, "ssh-public-key", "", "Path to SSH public key to write to the VM.")
 
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Kubeconfig file to pass to the CAPX controller.")
 	flag.StringVar(&namespace, "namespace", "", "Namespace in which CAPX reconciles Cluster resources.")
@@ -73,6 +78,18 @@ func main() {
 	}
 	fmt.Fprintln(os.Stderr, "Read kubeconfig")
 
+	sshPublicKeyContents := []byte{}
+	if sshPublicKey != "" {
+		fmt.Fprintln(os.Stderr, "Reading SSH public key...")
+		sshPublicKeyContents, err = os.ReadFile(sshPublicKey)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to read SSH public key:", err)
+			defer os.Exit(1)
+			return
+		}
+		fmt.Fprintln(os.Stderr, "Read SSH public key")
+	}
+
 	fmt.Fprintln(os.Stderr, "Reading Prism Central credentials from the local environment...")
 	creds, additionalTrustBundle, err := ConfigFromLocalEnv()
 	if err != nil {
@@ -91,6 +108,26 @@ func main() {
 	}
 	fmt.Fprintln(os.Stderr, "Client created")
 
+	fmt.Fprintln(os.Stderr, "Generating cloud-init userdata")
+	userdata, err := userdata.String(userdata.Options{
+		CAPXExecutableURL:     defaultCAPXExecutableURL,
+		Kubeconfig:            string(kubeconfigContents),
+		SSHPublicKey:          string(sshPublicKeyContents),
+		Endpoint:              creds.Endpoint,
+		Namespace:             namespace,
+		Username:              creds.Username,
+		Password:              creds.Password,
+		AdditionalTrustBundle: additionalTrustBundle,
+		Insecure:              creds.Insecure,
+		Categories:            "",
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to generate cloud-init userdata:", err)
+		defer os.Exit(1)
+		return
+	}
+	fmt.Fprintln(os.Stderr, "Generated cloud-init userdata")
+
 	fmt.Fprintln(os.Stderr, "Creating VM...")
 	opts := &VMOptions{
 		vmName:                vmName,
@@ -99,9 +136,8 @@ func main() {
 		vmSubnet:              vmSubnet,
 		creds:                 creds,
 		additionalTrustBundle: additionalTrustBundle,
-		kubeconfigContents:    kubeconfigContents,
 	}
-	uuid, err := CreateVM(ctx, client, opts)
+	uuid, err := CreateVM(ctx, client, opts, userdata)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to create VM:", err)
 		defer os.Exit(1)
@@ -143,32 +179,32 @@ func CreateClient(creds *prismgoclient.Credentials, additionalTrustBundle string
 }
 
 type VMOptions struct {
-	vmName                string
-	vmImageName           string
-	vmNutanixCluster      string
-	vmSubnet              string
-	kubeconfigContents    []byte
+	vmName           string
+	vmImageName      string
+	vmNutanixCluster string
+	vmSubnet         string
+
 	creds                 *prismgoclient.Credentials
 	additionalTrustBundle string
 }
 
-func CreateVM(ctx context.Context, client *v3client.Client, opts *VMOptions) (string, error) {
+func CreateVM(ctx context.Context, client *v3client.Client, opts *VMOptions, userdata string) (string, error) {
 	peUUID, err := GetPEUUID(ctx, client, &opts.vmNutanixCluster, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to get UUID for cluster %s: %w", opts.vmNutanixCluster, err)
 	}
+
 	subnetUUID, err := GetSubnetUUID(ctx, client, peUUID, &opts.vmSubnet, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to get UUID for subnet %s: %w", opts.vmSubnet, err)
 	}
+
 	imageUUID, err := GetImageUUID(ctx, client, &opts.vmImageName, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to get UUID for image %s: %w", opts.vmImageName, err)
 	}
 
 	metadata := fmt.Sprintf("{\"hostname\": \"%s\"}", opts.vmName)
-	// TODO Create userdata.
-	userdata := ""
 
 	input := &v3client.VMIntentInput{
 		Metadata: &v3client.Metadata{

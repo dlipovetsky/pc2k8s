@@ -1,0 +1,71 @@
+#cloud-config
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - {{ .SSHPublicKey }}
+
+write_files:
+-   path: /etc/systemd/system/capx.service
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Cluster API Nutanix Infra Provider
+      Documentation=https://github.com/nutanix-cloud-native/cluster-api-provider-nutanix
+      After=network.target local-fs.target
+      
+      # Disable rate limiting
+      StartLimitIntervalSec=0
+
+      [Service]
+      EnvironmentFile=/etc/capx/env
+      # Tells CAPX controller to configure Prism client from local env vars.
+      Environment=LOCAL_PROVIDER=""
+      ExecStart=/opt/cluster-api-provider-nutanix -kubeconfig=/etc/capx/kubeconfig -namespace=${NAMESPACE}
+      
+      Type=exec
+      Restart=always
+      RestartSec=30
+      OOMScoreAdjust=-999
+
+      [Install]
+      WantedBy=multi-user.target
+
+-   path: /etc/capx/kubeconfig
+    owner: root:root
+    permissions: '0600'
+    content: |{{ .Kubeconfig | nindent 8 }}
+
+-   path: /etc/capx/env
+    owner: root:root
+    permissions: '0600'
+    content: |
+        # The Kubernetes namespace. Equal to the DKP workspace.
+        NAMESPACE={{ .Namespace }}
+
+        # The user gets this information from Prism Central.
+        # Must be a URL, e.g. https://prism-bowser.ntnxsherlock.com:9440
+        NUTANIX_ENDPOINT={{ .Endpoint }}
+        
+        # The user gets this from a Prism Central account.
+        NUTANIX_USERNAME={{ .Username }}
+        NUTANIX_PASSWORD={{ .Password }}
+        
+        # Given the endpoint and port, the user can download this via browser or openssl.
+        # We can also download by running openssl in the VM on behalf of the user.
+        NUTANIX_ADDITIONAL_TRUST_BUNDLE={{ .AdditionalTrustBundle }}
+        
+        # Must be true if no trust bundle is provided, false otherwise.
+        NUTANIX_INSECURE={{ .Insecure }}
+        
+        # Categories can be left empty.
+        NUTANIX_CATEGORIES={{ .Categories }}
+
+runcmd:
+  # Download the binary
+  - curl -SsL {{ .CAPXExecutableURL }} -o /opt/cluster-api-provider-nutanix
+  # Mark it executable
+  - chmod u+x /opt/cluster-api-provider-nutanix
+  # Enable and start the systemd service
+  - systemctl enable --now capx.service
