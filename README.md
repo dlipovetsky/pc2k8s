@@ -2,7 +2,7 @@
 
 1.  Upload image to Prism Central
 
-    <https://cloud-images.ubuntu.com/minimal/releases/jammy/release-20240125/>
+    <https://cloud-images.ubuntu.com/minimal/releases/jammy/release-20240125/ubuntu-22.04-minimal-cloudimg-amd64.img>
 
 1.  Create cloud-init user-data.
 
