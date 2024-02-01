@@ -42,26 +42,26 @@ write_files:
     owner: root:root
     permissions: '0600'
     content: |
-      # The Kubernetes namespace. Equal to the DKP workspace.
-      NAMESPACE=
+        # The Kubernetes namespace. Equal to the DKP workspace.
+        NAMESPACE=
 
-      # The user gets this information from Prism Central.
-      # Must be a URL, e.g. https://prism-bowser.ntnxsherlock.com:9440
-      NUTANIX_ENDPOINT=
-      
-      # The user gets this from a Prism Central account.
-      NUTANIX_USERNAME=
-      NUTANIX_PASSWORD=
-      
-      # Given the endpoint and port, the user can download this via browser or openssl.
-      # We can also download by running openssl in the VM on behalf of the user.
-      NUTANIX_ADDITIONAL_TRUST_BUNDLE=
-      
-      # Must be true if no trust bundle is provided, false otherwise.
-      NUTANIX_INSECURE=true
-      
-      # Categories can be left empty.
-      NUTANIX_CATEGORIES=
+        # The user gets this information from Prism Central.
+        # Must be a URL, e.g. https://prism-bowser.ntnxsherlock.com:9440
+        NUTANIX_ENDPOINT=
+        
+        # The user gets this from a Prism Central account.
+        NUTANIX_USERNAME=
+        NUTANIX_PASSWORD=
+        
+        # Given the endpoint and port, the user can download this via browser or openssl.
+        # We can also download by running openssl in the VM on behalf of the user.
+        NUTANIX_ADDITIONAL_TRUST_BUNDLE=
+        
+        # Must be true if no trust bundle is provided, false otherwise.
+        NUTANIX_INSECURE=true
+        
+        # Categories can be left empty.
+        NUTANIX_CATEGORIES=
 
 runcmd:
   # Download the binary
