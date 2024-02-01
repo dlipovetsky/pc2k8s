@@ -3,7 +3,7 @@ package userdata
 import (
 	"bytes"
 	_ "embed"
-	"html/template"
+	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 )
