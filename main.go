@@ -36,7 +36,7 @@ func main() {
 
 	flag.StringVar(&vmName, "vm-name", defaultVMName, "VM name.")
 	flag.StringVar(&vmImageName, "vm-image-name", "", "VM image to use.")
-	flag.StringVar(&vmNutanixCluster, "vm-nutanix-cluser", "", "VM nutanix cluster.")
+	flag.StringVar(&vmNutanixCluster, "vm-nutanix-cluster", "", "VM nutanix cluster.")
 	flag.StringVar(&vmSubnet, "vm-subnet", "", "VM subnet.")
 
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Kubeconfig file to pass to the CAPX controller.")
